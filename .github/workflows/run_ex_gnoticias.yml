@@ -2,9 +2,9 @@ name: Ejecutar ex_gnoticias.py tres veces al día
 
 on:
   schedule:
-    - cron: '0 8 * * *'
-    - cron: '0 12 * * *'
-    - cron: '0 20 * * *'
+  - cron: '0 13 * * *'
+  - cron: '0 17 * * *'
+  - cron: '0 21 * * *'
   workflow_dispatch:
 
 jobs:
