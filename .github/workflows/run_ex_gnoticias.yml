@@ -40,6 +40,7 @@ jobs:
           git add data/Eto_col26.db
           if ! git diff --staged --quiet; then
             git commit -m "chore(data): Update database with new news"
+            git pull --rebase
             git push
           else
             echo "No changes to the database to commit."
