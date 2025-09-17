@@ -30,4 +30,4 @@ jobs:
           pip install -r requirements.txt
       - name: Ejecutar ex_gnoticias.py
         run: |
-          python gnoticias/ex_gnoticias.py
+          python -m gnoticias.ex_gnoticias
