@@ -140,11 +140,6 @@ def save_news_to_db_dia(news_data):
     except Exception as err:
         print(f"❌ Error al guardar noticia (dia) '{news_data['noticia']}': {err}")
 
-
-
-
-
-
 def reset_candidatos_news():
     """Resetea el campo 'ex' a NULL para todos los registros de candidatos."""
     try:
@@ -156,7 +151,54 @@ def reset_candidatos_news():
     except Exception as e:
         print(f"❌ Error al resetear 'news' en candidatos: {e}")
 
+def save_news_to_gnoticias_with_sentiment(news_data):
+    """Inserta una nueva noticia con su análisis de sentimiento en la tabla `gnoticias`."""
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                INSERT INTO gnoticias (
+                    id_candidato, id_gnoticia, noticia, medio, fecha, source_href,
+                    link, ano, mes, dia, hora, minuto, dia_sem, dia_ano, id_original,
+                    sentimiento, tema
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                news_data["candidato_id"],
+                news_data["id"],
+                news_data["noticia"],
+                news_data["medio"],
+                news_data["fecha"],
+                news_data["source_href"],
+                news_data["link"],
+                news_data["ano"],
+                news_data["mes"],
+                news_data["dia"],
+                news_data["hora"],
+                news_data["minuto"],
+                news_data["dia_sem"],
+                news_data["dia_ano"],
+                news_data["id_largo"],
+                news_data.get("sentimiento"), # Use .get() for safety
+                news_data.get("tema")         # Use .get() for safety
+            ))
+            conn.commit()
+            print(f"✅ (gnoticias) Guardada con análisis: {news_data['noticia']}")
+    except sqlite3.IntegrityError:
+        # This is expected if the news already exists, so we can ignore it or log it quietly.
+        pass
+    except Exception as err:
+        print(f"❌ Error al guardar noticia en gnoticias '{news_data['noticia']}': {err}")
+
+def news_exists_in_gnoticias(news_id, candidato_id):
+    """Verifica si una noticia ya existe en la tabla `gnoticias`."""
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT 1 FROM gnoticias WHERE id_gnoticia = ? AND id_candidato = ?", (news_id, candidato_id))
+            exists = cur.fetchone() is not None
+        return exists
+    except Exception as e:
+        print(f"❌ Error al verificar existencia de noticia en gnoticias {news_id}: {e}")
+        return False
 
 pass
-
-
