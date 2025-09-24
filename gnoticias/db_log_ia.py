@@ -11,10 +11,14 @@ def get_db_connection():
 
 def get_modelos_config():
     """Retorna la configuración de modelos y sus cuotas diarias."""
-    # Se puede expandir para incluir más modelos, claves de API, etc.
     return {
-        "gemini-1.5-flash": {"quota": 45} # Dejar un margen de 5 por si acaso
-        # "otro-modelo": {"quota": 100}
+        "gemini-1.5-flash": {"quota": 45},
+        "gemini-1.5-pro": {"quota": 45},
+        "gemini-2.0-flash": {"quota": 45},
+        "gemini-2.0-flash-lite": {"quota": 45},
+        "gemini-2.5-flash": {"quota": 45},
+        "gemini-2.5-pro": {"quota": 45},
+        "gemini-2.5-flash-lite": {"quota": 45},
     }
 
 def get_next_available_model():
