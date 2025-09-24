@@ -3,7 +3,7 @@ name: Ejecutar ex_gnoticias.py cuatro veces al día
 on:
   schedule:
   - cron: '0 13 * * *'   # 08:00 Bogotá
-  - cron: '0 17 * * *'   # 12:00 Bogotá
+  
   - cron: '0 22 * * *'   # 17:00 Bogotá
   - cron: '0 4 * * *'    # 23:00 Bogotá
   workflow_dispatch:
