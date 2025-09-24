@@ -21,6 +21,7 @@ from gnoticias.db_gnoticias import (
     reset_candidatos_news,
 )
 from gnoticias.db_log_ejecucion import log_start, log_end, log_error_update, log_error_new
+from gnoticias.procesar_sentimientos import procesar_lote_sentimientos
 
 # ================= CONSTANTES =================
 STOPWORDS_APELLIDO = {"de", "del", "la", "las", "los", "y", "san", "santa"}
@@ -277,7 +278,7 @@ def main(start_date_str=None, end_date_str=None):
 
         if not row:
             print("✅ No hay más candidatos por procesar. Proceso finalizado.")
-            log_end(log_id, estado='finished', mensaje='No quedan candidatos')
+            # log_end(log_id, estado='finished', mensaje='No quedan candidatos')
             break
 
         candidato_id, candidato_nombre, id_tema = row
@@ -287,6 +288,18 @@ def main(start_date_str=None, end_date_str=None):
         except Exception as e:
             print(f"❌ Error procesando candidato {candidato_id}: {e}")
             log_error_update(log_id, e)
+
+    # Una vez terminado el proceso principal, ejecutar un lote de análisis de sentimientos
+    print("\n---")
+    print("🚀 Iniciando lote de procesamiento de sentimientos faltantes...")
+    try:
+        # La API Key ya está configurada desde el inicio de main()
+        procesar_lote_sentimientos(log_id=log_id)
+    except Exception as e:
+        print(f"❌ Error inesperado durante el procesamiento de sentimientos por lote: {e}")
+        log_error_update(log_id, e)
+    finally:
+        log_end(log_id, estado='finished', mensaje='Proceso diario y lote de sentimientos completado.')
 
 if __name__ == "__main__":
     import argparse

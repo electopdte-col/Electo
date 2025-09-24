@@ -201,4 +201,39 @@ def news_exists_in_gnoticias(news_id, candidato_id):
         print(f"❌ Error al verificar existencia de noticia en gnoticias {news_id}: {e}")
         return False
 
-pass
+def get_news_without_sentiment(limit=250):
+    """
+    Obtiene noticias de 'gnoticias' sin sentimiento, uniendo con 'candidatos' para obtener el nombre.
+    """
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT g.id_gnoticia, g.noticia, c.nombre AS candidato_nombre
+                FROM gnoticias g
+                JOIN candidatos c ON g.id_candidato = c.id_candidato
+                WHERE g.sentimiento IS NULL
+                ORDER BY g.fecha DESC
+                LIMIT ?
+            """, (limit,))
+            return cur.fetchall()
+    except Exception as e:
+        print(f"❌ Error al obtener noticias sin sentimiento: {e}")
+        return []
+
+def update_news_sentiment(id_gnoticia, sentimiento, tema):
+    """
+    Actualiza el sentimiento y el tema de una noticia específica en la tabla `gnoticias`.
+    """
+    try:
+        with get_db_connection() as conn:
+            cur = conn.cursor()
+            cur.execute("""
+                UPDATE gnoticias
+                SET sentimiento = ?, tema = ?, fecha_analisis = ?
+                WHERE id_gnoticia = ?
+            """, (sentimiento, tema, datetime.now(), id_gnoticia))
+            conn.commit()
+            # print(f"✅ Noticia {id_gnoticia} actualizada con sentimiento: {sentimiento}")
+    except Exception as e:
+        print(f"❌ Error al actualizar noticia {id_gnoticia}: {e}")
