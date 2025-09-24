@@ -8,10 +8,10 @@ from gnoticias.db_gnoticias import (
     update_news_sentiment
 )
 from gnoticias.db_log_ejecucion import log_start, log_end, log_error_update
-from gnoticias.db_log_ia import get_next_available_model, log_api_call
 
 # ================= CONSTANTES =================
 API_KEYS_PATH = "api_keys.txt"
+MODEL_NAME = "gemini-2.5-flash-lite" # Hardcoded model name
 
 # ================= FUNCIONES =================
 
@@ -30,13 +30,8 @@ def get_api_key(key_name="GEMINI_API_KEY"):
         return None
 
 def analizar_sentimiento(prompt):
-    """Analiza el sentimiento de un texto usando un modelo de IA disponible."""
-    model_name = get_next_available_model()
-    if not model_name:
-        print("❌ Todos los modelos de IA han alcanzado su cuota diaria.")
-        return None
-
-    print(f"🤖 Usando modelo: {model_name}")
+    """Analiza el sentimiento de un texto usando el modelo Gemini 2.5 Flash-Lite."""
+    print(f"🤖 Usando modelo: {MODEL_NAME}")
     
     response_schema = {
         "type": "object",
@@ -48,7 +43,7 @@ def analizar_sentimiento(prompt):
     }
     
     modelo = genai.GenerativeModel(
-        model_name,
+        MODEL_NAME,
         generation_config={
             "response_mime_type": "application/json",
             "response_schema": response_schema
@@ -57,29 +52,28 @@ def analizar_sentimiento(prompt):
     
     try:
         respuesta = modelo.generate_content(prompt)
-        log_api_call(model_name) # Registrar la llamada exitosa
         return json.loads(respuesta.text)
     except Exception as e:
-        print(f"Ocurrió un error al generar contenido con {model_name}: {e}")
+        print(f"Ocurrió un error al generar contenido con {MODEL_NAME}: {e}")
         return None
 
-def procesar_lote_sentimientos(log_id=None):
-    """Procesa un único lote de hasta 250 noticias sin sentimiento."""
-    print("\nBuscando un lote de noticias sin sentimiento...")
+def procesar_todas_las_noticias_sin_sentimiento(log_id=None):
+    """Procesa todas las noticias sin sentimiento de una sola vez."""
+    print("\nBuscando todas las noticias sin sentimiento...")
     try:
-        news_batch = get_news_without_sentiment(limit=250)
+        news_batch = get_news_without_sentiment() # No limit, fetches all
     except Exception as e:
         print(f"❌ Error inesperado al obtener noticias: {e}")
         if log_id:
             log_error_update(log_id, e)
-        return 0, False
+        return 0
 
     if not news_batch:
         print("✅ No hay más noticias por procesar.")
-        return 0, False
+        return 0
 
-    print(f"Lote de {len(news_batch)} noticias encontrado. Procesando...")
-    procesadas_en_lote = 0
+    print(f"Se encontraron {len(news_batch)} noticias. Procesando...")
+    total_procesadas = 0
 
     for news in news_batch:
         id_gnoticia = news["id_gnoticia"]
@@ -102,13 +96,10 @@ def procesar_lote_sentimientos(log_id=None):
                 sentimiento = analisis_json.get('sentimiento')
                 tema = analisis_json.get('tema_principal')
                 update_news_sentiment(id_gnoticia, sentimiento, tema)
-                procesadas_en_lote += 1
+                total_procesadas += 1
                 print(f"   -> Análisis exitoso. Sentimiento: {sentimiento}")
             else:
-                # Si es None, puede ser por error de API o por cuota alcanzada
-                print("   -> Falló el análisis con IA o se alcanzó la cuota. Deteniendo el lote.")
-                # Se detiene el lote actual para no seguir intentando si se acabó la cuota
-                break
+                print("   -> Falló el análisis con IA. Se reintentará en la próxima ejecución.")
 
             time.sleep(2) # Pausa para no exceder limites de API
 
@@ -118,12 +109,12 @@ def procesar_lote_sentimientos(log_id=None):
                 log_error_update(log_id, e)
             continue
     
-    print(f"Lote procesado. {procesadas_en_lote} noticias actualizadas.")
-    return procesadas_en_lote, True
+    print(f"Proceso completado. {total_procesadas} noticias actualizadas.")
+    return total_procesadas
 
 # ========= EJECUCIÓN PRINCIPAL =========
 def main():
-    """Función principal para procesar todas las noticias sin sentimiento en bucle."""
+    """Función principal para procesar todas las noticias sin sentimiento."""
     api_key = get_api_key()
     if not api_key:
         print("No se pudo obtener la API Key de Gemini. Abortando.")
@@ -132,12 +123,7 @@ def main():
 
     log_id = log_start('procesar_sentimientos', 'Inicio de análisis de sentimientos faltantes')
     
-    total_procesadas = 0
-    while True:
-        procesadas, continuar = procesar_lote_sentimientos(log_id)
-        total_procesadas += procesadas
-        if not continuar or procesadas == 0:
-            break
+    total_procesadas = procesar_todas_las_noticias_sin_sentimiento(log_id)
 
     print(f"\n🏁 Proceso completado. Total de noticias actualizadas: {total_procesadas}")
     log_end(log_id, estado='completed', mensaje=f'Total procesadas: {total_procesadas}')

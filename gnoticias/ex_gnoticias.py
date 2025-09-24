@@ -22,11 +22,11 @@ from gnoticias.db_gnoticias import (
 )
 from gnoticias.db_log_ejecucion import log_start, log_end, log_error_update, log_error_new
 from gnoticias.procesar_sentimientos import procesar_lote_sentimientos
-from gnoticias.db_log_ia import get_next_available_model, log_api_call
 
 # ================= CONSTANTES =================
 STOPWORDS_APELLIDO = {"de", "del", "la", "las", "los", "y", "san", "santa"}
 API_KEYS_PATH = "api_keys.txt"
+MODEL_NAME = "gemini-2.5-flash-lite"
 
 # ================= FUNCIONES =================
 def similarity(a, b):
@@ -57,13 +57,8 @@ def get_api_key(key_name="GEMINI_API_KEY"):
         return None
 
 def analizar_sentimiento(prompt):
-    """Analiza el sentimiento de un texto usando un modelo de IA disponible."""
-    model_name = get_next_available_model()
-    if not model_name:
-        print("❌ Todos los modelos de IA han alcanzado su cuota diaria.")
-        return None
-
-    print(f"🤖 Usando modelo: {model_name}")
+    """Analiza el sentimiento de un texto usando un modelo de IA."""
+    print(f"🤖 Usando modelo: {MODEL_NAME}")
     
     response_schema = {
         "type": "object",
@@ -75,7 +70,7 @@ def analizar_sentimiento(prompt):
     }
     
     modelo = genai.GenerativeModel(
-        model_name,
+        MODEL_NAME,
         generation_config={
             "response_mime_type": "application/json",
             "response_schema": response_schema
@@ -84,10 +79,9 @@ def analizar_sentimiento(prompt):
     
     try:
         respuesta = modelo.generate_content(prompt)
-        log_api_call(model_name) # Registrar la llamada exitosa
         return json.loads(respuesta.text)
     except Exception as e:
-        print(f"Ocurrió un error al generar contenido con {model_name}: {e}")
+        print(f"Ocurrió un error al generar contenido con {MODEL_NAME}: {e}")
         return None
 
 def limpiar_apellidos(tokens):
