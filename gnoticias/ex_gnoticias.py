@@ -57,7 +57,7 @@ def get_api_key(key_name="GEMINI_API_KEY"):
         return None
 
 def analizar_sentimiento(prompt):
-    """Analiza el sentimiento de un texto usando un modelo de IA."""
+    """Analiza el sentimiento de un texto usando un modelo de IA con reintentos exponenciales."""
     print(f"🤖 Usando modelo: {MODEL_NAME}")
     
     response_schema = {
@@ -77,12 +77,21 @@ def analizar_sentimiento(prompt):
         }
     )
     
-    try:
-        respuesta = modelo.generate_content(prompt)
-        return json.loads(respuesta.text)
-    except Exception as e:
-        print(f"Ocurrió un error al generar contenido con {MODEL_NAME}: {e}")
-        return None
+    reintentos = 0
+    while reintentos < 5:  # Intenta hasta 5 veces
+        try:
+            respuesta = modelo.generate_content(prompt)
+            return json.loads(respuesta.text)
+        except Exception as e:
+            if "quota" in str(e).lower():
+                print(f"Error de cuota, reintentando en {2**reintentos} segundos...")
+                time.sleep(2**reintentos)  # Espera exponencial
+                reintentos += 1
+            else:
+                print(f"Ocurrió un error al generar contenido con {MODEL_NAME}: {e}")
+                return None
+    print(f"❌ Falló el análisis de sentimiento después de {reintentos} reintentos.")
+    return None
 
 def limpiar_apellidos(tokens):
     """Quita partículas de apellidos (de, del, la, etc.)"""

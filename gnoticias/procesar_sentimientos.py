@@ -30,7 +30,7 @@ def get_api_key(key_name="GEMINI_API_KEY"):
         return None
 
 def analizar_sentimiento(prompt):
-    """Analiza el sentimiento de un texto usando el modelo Gemini 2.5 Flash-Lite."""
+    """Analiza el sentimiento de un texto usando el modelo Gemini 2.5 Flash-Lite con reintentos exponenciales."""
     print(f"🤖 Usando modelo: {MODEL_NAME}")
     
     response_schema = {
@@ -50,12 +50,21 @@ def analizar_sentimiento(prompt):
         }
     )
     
-    try:
-        respuesta = modelo.generate_content(prompt)
-        return json.loads(respuesta.text)
-    except Exception as e:
-        print(f"Ocurrió un error al generar contenido con {MODEL_NAME}: {e}")
-        return None
+    reintentos = 0
+    while reintentos < 5:  # Intenta hasta 5 veces
+        try:
+            respuesta = modelo.generate_content(prompt)
+            return json.loads(respuesta.text)
+        except Exception as e:
+            if "quota" in str(e).lower():
+                print(f"Error de cuota, reintentando en {2**reintentos} segundos...")
+                time.sleep(2**reintentos)  # Espera exponencial
+                reintentos += 1
+            else:
+                print(f"Ocurrió un error al generar contenido con {MODEL_NAME}: {e}")
+                return None
+    print(f"❌ Falló el análisis de sentimiento después de {reintentos} reintentos.")
+    return None
 
 def procesar_todas_las_noticias_sin_sentimiento(log_id=None):
     """Procesa todas las noticias sin sentimiento de una sola vez."""
