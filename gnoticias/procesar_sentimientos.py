@@ -98,7 +98,7 @@ def procesar_lote_sentimientos(log_id=None):
             else:
                 print("   -> Falló el análisis con IA. Se reintentará en la próxima ejecución.")
 
-            time.sleep(2) # Pausa para no exceder limites de API
+            time.sleep(4) # Pausa para no exceder limites de API
 
         except Exception as e:
             print(f"❌ Error procesando noticia {id_gnoticia}: {e}")
