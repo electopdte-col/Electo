@@ -232,7 +232,7 @@ def fetch_news_for_candidate(candidato_id, candidato_nombre, start_date, end_dat
                 break # Detiene el bucle for para no procesar más noticias de este candidato
 
             save_news_to_gnoticias_with_sentiment(prelim)
-            time.sleep(2)
+            time.sleep(5)
 
     except requests.exceptions.RequestException as e:
         print(f"❌ Error de red al obtener noticias: {e}")
