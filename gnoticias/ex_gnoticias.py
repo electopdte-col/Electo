@@ -21,7 +21,7 @@ from gnoticias.db_gnoticias import (
     reset_candidatos_news,
 )
 from gnoticias.db_log_ejecucion import log_start, log_end, log_error_update, log_error_new
-from gnoticias.procesar_sentimientos import procesar_lote_sentimientos
+from gnoticias.procesar_sentimientos import procesar_todas_las_noticias_sin_sentimiento
 
 # ================= CONSTANTES =================
 STOPWORDS_APELLIDO = {"de", "del", "la", "las", "los", "y", "san", "santa"}
@@ -280,7 +280,7 @@ def main(start_date_str=None, end_date_str=None):
     print("\n---")
     print("🚀 Iniciando lote de procesamiento de sentimientos faltantes...")
     try:
-        procesar_lote_sentimientos(log_id=log_id)
+        procesar_todas_las_noticias_sin_sentimiento(log_id=log_id)
     except Exception as e:
         print(f"❌ Error inesperado durante el procesamiento de sentimientos por lote: {e}")
         log_error_update(log_id, e)
