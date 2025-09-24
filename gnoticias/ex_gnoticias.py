@@ -12,16 +12,17 @@ from googlenewsdecoder import gnewsdecoder
 import requests
 import google.generativeai as genai
 
-# Funciones de DB movidas a `db_gnoticias.py`
+# Funciones de DB
 from gnoticias.db_gnoticias import (
     get_db_connection,
-    news_exists_in_gnoticias, # Modificado
-    save_news_to_gnoticias_with_sentiment, # Modificado
+    news_exists_in_gnoticias,
+    save_news_to_gnoticias_with_sentiment,
     marcar_candidato_como_procesado,
     reset_candidatos_news,
 )
 from gnoticias.db_log_ejecucion import log_start, log_end, log_error_update, log_error_new
 from gnoticias.procesar_sentimientos import procesar_lote_sentimientos
+from gnoticias.db_log_ia import get_next_available_model, log_api_call
 
 # ================= CONSTANTES =================
 STOPWORDS_APELLIDO = {"de", "del", "la", "las", "los", "y", "san", "santa"}
@@ -36,13 +37,11 @@ def normalize_text(text):
     """Normaliza el texto: minúsculas, sin tildes, puntuación como espacios."""
     if not text:
         return ""
-    # Descompone los caracteres con tildes y luego los convierte a ASCII para eliminarlas
     text = unicodedata.normalize('NFD', text.lower()).encode('ascii', 'ignore').decode('utf-8')
     text = re.sub(r'[^a-z0-9ñ\s]', ' ', text)
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-# --- LÓGICA DE ANÁLISIS DE IA (Integrada) ---
 def get_api_key(key_name="GEMINI_API_KEY"):
     """Lee la clave de API desde el archivo api_keys.txt."""
     try:
@@ -57,17 +56,15 @@ def get_api_key(key_name="GEMINI_API_KEY"):
         print(f"Error al leer la clave de API: {e}")
         return None
 
-def analizar_sentimiento(texto, candidata):
-    """Analiza el sentimiento de un texto usando Gemini."""
-    if not texto:
+def analizar_sentimiento(prompt):
+    """Analiza el sentimiento de un texto usando un modelo de IA disponible."""
+    model_name = get_next_available_model()
+    if not model_name:
+        print("❌ Todos los modelos de IA han alcanzado su cuota diaria.")
         return None
-    prompt = f'''
-    Analiza el siguiente titular de una noticia sobre {candidata}.
-    Extrae el tema principal en una frase corta (máx 5 palabras).
-    Clasifica el sentimiento hacia {candidata} en: Positivo, Negativo, o Neutral.
-    Retorna solo un JSON con claves "tema_principal" y "sentimiento".
-    Titular: {texto}
-    '''
+
+    print(f"🤖 Usando modelo: {model_name}")
+    
     response_schema = {
         "type": "object",
         "properties": {
@@ -76,31 +73,29 @@ def analizar_sentimiento(texto, candidata):
         },
         "required": ["tema_principal", "sentimiento"]
     }
+    
     modelo = genai.GenerativeModel(
-        "gemini-2.5-flash",
+        model_name,
         generation_config={
             "response_mime_type": "application/json",
             "response_schema": response_schema
         }
     )
+    
     try:
         respuesta = modelo.generate_content(prompt)
+        log_api_call(model_name) # Registrar la llamada exitosa
         return json.loads(respuesta.text)
     except Exception as e:
-        print(f"Ocurrió un error al generar contenido con Gemini: {e}")
+        print(f"Ocurrió un error al generar contenido con {model_name}: {e}")
         return None
-
-# ... (Otras funciones auxiliares como match_nombre_titular, etc. se mantienen) ...
 
 def limpiar_apellidos(tokens):
     """Quita partículas de apellidos (de, del, la, etc.)"""
     return [t for t in tokens if t not in STOPWORDS_APELLIDO]
 
 def buscar_nombre_en_titular(nombre, titular, umbral_nombre=85, umbral_fuzzy=85):
-    """
-    Busca el nombre de un candidato en un titular con reglas estrictas.
-    Requiere (nombre y al menos un apellido) O (apellido compuesto).
-    """
+    """Busca el nombre de un candidato en un titular con reglas estrictas."""
     nombre_norm = normalize_text(nombre)
     titular_norm = normalize_text(titular)
     
@@ -111,17 +106,14 @@ def buscar_nombre_en_titular(nombre, titular, umbral_nombre=85, umbral_fuzzy=85)
     partes_limpias = limpiar_apellidos(partes)
     nombre_simple = partes_limpias[0]
     
-    # Manejo de nombres con 2+ partes
     if len(partes_limpias) >= 2:
         apellido_paterno = partes_limpias[-2] if len(partes_limpias) >= 3 else partes_limpias[-1]
         apellido_materno = partes_limpias[-1]
         apellido_compuesto = " ".join(partes_limpias[-2:]) if len(partes_limpias) >= 3 else None
 
-        # Regla 1: Apellido compuesto exacto
         if apellido_compuesto and apellido_compuesto in titular_norm:
             return (apellido_compuesto, 100, "apellido_compuesto")
 
-        # Regla 2: Nombre simple Y al menos un apellido
         nombre_encontrado = nombre_simple in titular_norm.split()
         paterno_encontrado = apellido_paterno in titular_norm.split()
         materno_encontrado = apellido_materno in titular_norm.split()
@@ -135,16 +127,12 @@ def buscar_nombre_en_titular(nombre, titular, umbral_nombre=85, umbral_fuzzy=85)
             return (match_encontrado.strip(), 100, "nombre_y_apellido")
             
     elif len(partes_limpias) == 1:
-        # Regla para nombres de una sola palabra (ej. "Petro")
         if nombre_simple in titular_norm.split():
             return (nombre_simple, 100, "single_word_match")
 
-    # Si ninguna regla estricta se cumple, no hay coincidencia.
     return (None, 0, "no_match_estricto")
 
-# ========= PROCESAMIENTO DE ENTRADAS DEL FEED =========
 def process_feed_entry(entry, candidato_id):
-    # ... (Esta función se mantiene igual) ...
     titulo = entry.get("title", "")
     published_parsed = entry.get("published_parsed")
     if not published_parsed:
@@ -179,9 +167,7 @@ def process_feed_entry(entry, candidato_id):
         "link": link, "id_largo": entry_id,
     }
 
-# ========= LÓGICA DE EXTRACCIÓN Y ANÁLISIS =========
 def verificar_relevancia_especial(candidato_nombre, titular):
-    # ... (Esta función se mantiene igual) ...
     nombre_norm = normalize_text(candidato_nombre)
     titular_norm = normalize_text(titular)
     if nombre_norm == "miguel uribe londoño":
@@ -231,18 +217,28 @@ def fetch_news_for_candidate(candidato_id, candidato_nombre, start_date, end_dat
                 continue
 
             print(f"-> Relevante. Analizando sentimiento para: {prelim['noticia']}")
-            analisis_json = analizar_sentimiento(prelim['noticia'], candidato_nombre)
+            
+            prompt = f'''
+            Analiza el siguiente titular de una noticia sobre {candidato_nombre}.
+            Extrae el tema principal en una frase corta (máx 5 palabras).
+            Clasifica el sentimiento hacia {candidato_nombre} en: Positivo, Negativo, o Neutral.
+            Retorna solo un JSON con claves "tema_principal" y "sentimiento".
+            Titular: {prelim['noticia']}
+            '''
+            analisis_json = analizar_sentimiento(prompt)
+            
             if analisis_json:
                 prelim['sentimiento'] = analisis_json.get('sentimiento')
                 prelim['tema'] = analisis_json.get('tema_principal')
                 print(f"   -> Análisis exitoso. Sentimiento: {prelim['sentimiento']}")
             else:
-                prelim['sentimiento'] = None
-                prelim['tema'] = None
-                print("   -> Falló el análisis con IA. Se guardará sin análisis.")
+                print("   -> Falló el análisis con IA o se alcanzó la cuota. Se guardará sin análisis y se detiene el proceso para este candidato.")
+                # Guardar sin análisis y detener para este candidato
+                save_news_to_gnoticias_with_sentiment(prelim)
+                break # Detiene el bucle for para no procesar más noticias de este candidato
 
             save_news_to_gnoticias_with_sentiment(prelim)
-            time.sleep(2) # Pausa de 2 segundos
+            time.sleep(2)
 
     except requests.exceptions.RequestException as e:
         print(f"❌ Error de red al obtener noticias: {e}")
@@ -251,7 +247,6 @@ def fetch_news_for_candidate(candidato_id, candidato_nombre, start_date, end_dat
 
     marcar_candidato_como_procesado(candidato_id, campo="ex")
 
-# ========= EJECUCIÓN PRINCIPAL =========
 def main(start_date_str=None, end_date_str=None):
     """Función principal para procesar todos los candidatos pendientes."""
     api_key = get_api_key()
@@ -278,7 +273,6 @@ def main(start_date_str=None, end_date_str=None):
 
         if not row:
             print("✅ No hay más candidatos por procesar. Proceso finalizado.")
-            # log_end(log_id, estado='finished', mensaje='No quedan candidatos')
             break
 
         candidato_id, candidato_nombre, id_tema = row
@@ -289,11 +283,9 @@ def main(start_date_str=None, end_date_str=None):
             print(f"❌ Error procesando candidato {candidato_id}: {e}")
             log_error_update(log_id, e)
 
-    # Una vez terminado el proceso principal, ejecutar un lote de análisis de sentimientos
     print("\n---")
     print("🚀 Iniciando lote de procesamiento de sentimientos faltantes...")
     try:
-        # La API Key ya está configurada desde el inicio de main()
         procesar_lote_sentimientos(log_id=log_id)
     except Exception as e:
         print(f"❌ Error inesperado durante el procesamiento de sentimientos por lote: {e}")
