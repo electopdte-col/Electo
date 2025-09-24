@@ -230,9 +230,9 @@ def update_news_sentiment(id_gnoticia, sentimiento, tema):
             cur = conn.cursor()
             cur.execute("""
                 UPDATE gnoticias
-                SET sentimiento = ?, tema = ?, fecha_analisis = ?
+                SET sentimiento = ?, tema = ?
                 WHERE id_gnoticia = ?
-            """, (sentimiento, tema, datetime.now(), id_gnoticia))
+            """, (sentimiento, tema, id_gnoticia))
             conn.commit()
             # print(f"✅ Noticia {id_gnoticia} actualizada con sentimiento: {sentimiento}")
     except Exception as e:
