@@ -1,6 +1,7 @@
 import json
 import time
 import google.generativeai as genai
+import sys
 
 # Funciones de DB
 from gnoticias.db_gnoticias import (
@@ -64,7 +65,8 @@ def analizar_sentimiento(prompt):
                 print(f"Ocurrió un error al generar contenido con {MODEL_NAME}: {e}")
                 return None
     print(f"❌ Falló el análisis de sentimiento después de {reintentos} reintentos.")
-    return None
+    print("Terminando el proceso por error de cuota.")
+    sys.exit(1)
 
 def procesar_todas_las_noticias_sin_sentimiento(log_id=None):
     """Procesa todas las noticias sin sentimiento de una sola vez."""
