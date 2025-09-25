@@ -2,10 +2,10 @@ name: Cron ex_gnoticias
 
 on:
   schedule:
-  - cron: '30 12 * * *'   # 07:30 Bogotá
-  - cron: '0 16 * * *'    # 11:00 Bogotá
-  - cron: '0 21 * * *'    # 16:00 Bogotá
-  - cron: '0 4 * * *'     # 23:00 Bogotá
+  - cron: '0 12 * * *'   # 07:00 Bogotá
+  - cron: '0 17 * * *'   # 12:00 Bogotá
+  - cron: '0 22 * * *'   # 17:00 Bogotá
+  - cron: '0 4 * * *'    # 23:00 Bogotá
   workflow_dispatch:
 
 jobs:
