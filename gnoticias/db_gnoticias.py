@@ -1,7 +1,7 @@
 import sqlite3
 from datetime import datetime
 
-DB_PATH = "data/Eto_col26.db"  # Ruta a la base de datos SQLite
+DB_PATH = "data/gnoticias.db"  # Ruta a la base de datos SQLite
 
 
 class DatabaseConnection:
