@@ -201,10 +201,11 @@ def news_exists_in_gnoticias(news_id, candidato_id):
         print(f"❌ Error al verificar existencia de noticia en gnoticias {news_id}: {e}")
         return False
 
-def get_news_without_sentiment(limit=500):
+def get_news_without_sentiment(limit=1000):
     """
     Obtiene noticias de 'gnoticias' sin sentimiento, uniendo con 'candidatos' para obtener el nombre.
     """
+    print(f"DEBUG: get_news_without_sentiment recibió un límite de: {limit}")
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
