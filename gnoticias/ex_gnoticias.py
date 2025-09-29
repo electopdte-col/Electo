@@ -78,7 +78,7 @@ def process_feed_entry(entry, candidato_id):
 
 
 
-def fetch_news_for_candidate(candidato_id, candidato_nombre, start_date, end_date, id_tema=None, keywords=None):
+def fetch_news_for_candidate(candidato_id, candidato_nombre, start_date, end_date, id_tema=None, keywords=None, log_id=None):
     """Obtiene noticias, las analiza y las guarda directamente en la tabla gnoticias."""
     safe_name = " ".join(str(candidato_nombre).split())
     query = f'"{safe_name}" when:1d'
@@ -116,6 +116,7 @@ def fetch_news_for_candidate(candidato_id, candidato_nombre, start_date, end_dat
                 print(f"⚠️ Duplicada en gnoticias (omitida): {prelim['noticia']}")
                 continue
 
+            prelim['id_log'] = log_id # Asignar el id de log a la noticia
             print(f"-> Relevante. Guardando noticia: {prelim['noticia']}")
             save_news_to_gnoticias_with_sentiment(prelim)
             time.sleep(1)
@@ -154,7 +155,7 @@ def main(start_date_str=None, end_date_str=None):
         candidato_id, candidato_nombre, id_tema, keywords = row
         print(f"✅ Procesando: {candidato_nombre} (ID {candidato_id})")
         try:
-            fetch_news_for_candidate(candidato_id, candidato_nombre, None, None, id_tema=id_tema, keywords=keywords)
+            fetch_news_for_candidate(candidato_id, candidato_nombre, None, None, id_tema=id_tema, keywords=keywords, log_id=log_id)
         except Exception as e:
             print(f"❌ Error procesando candidato {candidato_id}: {e}")
             log_error_update(log_id, e)

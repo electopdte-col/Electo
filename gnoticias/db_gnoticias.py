@@ -160,8 +160,8 @@ def save_news_to_gnoticias_with_sentiment(news_data):
                 INSERT INTO gnoticias (
                     id_candidato, id_gnoticia, noticia, medio, fecha, source_href,
                     link, ano, mes, dia, hora, minuto, dia_sem, dia_ano, id_original,
-                    sentimiento, tema
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    sentimiento, tema, id_log
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 news_data["candidato_id"],
                 news_data["id"],
@@ -179,7 +179,8 @@ def save_news_to_gnoticias_with_sentiment(news_data):
                 news_data["dia_ano"],
                 news_data["id_largo"],
                 news_data.get("sentimiento"), # Use .get() for safety
-                news_data.get("tema")         # Use .get() for safety
+                news_data.get("tema"),         # Use .get() for safety
+                news_data.get("id_log")        # Use .get() for safety
             ))
             conn.commit()
             print(f"✅ (gnoticias) Guardada con análisis: {news_data['noticia']}")
