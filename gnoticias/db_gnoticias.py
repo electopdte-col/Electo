@@ -151,8 +151,8 @@ def reset_candidatos_news():
     except Exception as e:
         print(f"❌ Error al resetear 'news' en candidatos: {e}")
 
-def save_news_to_gnoticias_with_sentiment(news_data):
-    """Inserta una nueva noticia con su análisis de sentimiento en la tabla `gnoticias`."""
+def save_news_to_gnoticias(news_data):
+    """Inserta una nueva noticia en la tabla `gnoticias`."""
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
@@ -160,8 +160,8 @@ def save_news_to_gnoticias_with_sentiment(news_data):
                 INSERT INTO gnoticias (
                     id_candidato, id_gnoticia, noticia, medio, fecha, source_href,
                     link, ano, mes, dia, hora, minuto, dia_sem, dia_ano, id_original,
-                    sentimiento, tema, id_log
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    id_log
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 news_data["candidato_id"],
                 news_data["id"],
@@ -178,17 +178,16 @@ def save_news_to_gnoticias_with_sentiment(news_data):
                 news_data["dia_sem"],
                 news_data["dia_ano"],
                 news_data["id_largo"],
-                news_data.get("sentimiento"), # Use .get() for safety
-                news_data.get("tema"),         # Use .get() for safety
-                news_data.get("id_log")        # Use .get() for safety
+                news_data.get("id_log")
             ))
             conn.commit()
-            print(f"✅ (gnoticias) Guardada con análisis: {news_data['noticia']}")
+            print(f"✅ (gnoticias) Guardada: {news_data['noticia']}")
     except sqlite3.IntegrityError:
         # This is expected if the news already exists, so we can ignore it or log it quietly.
         pass
     except Exception as err:
         print(f"❌ Error al guardar noticia en gnoticias '{news_data['noticia']}': {err}")
+
 
 def news_exists_in_gnoticias(news_id, candidato_id):
     """Verifica si una noticia ya existe en la tabla `gnoticias`."""
@@ -201,41 +200,3 @@ def news_exists_in_gnoticias(news_id, candidato_id):
     except Exception as e:
         print(f"❌ Error al verificar existencia de noticia en gnoticias {news_id}: {e}")
         return False
-
-def get_news_without_sentiment(limit=1000):
-    """
-    Obtiene noticias de 'gnoticias' sin sentimiento, uniendo con 'candidatos' para obtener el nombre.
-    """
-    print(f"DEBUG: get_news_without_sentiment recibió un límite de: {limit}")
-    try:
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT g.id_gnoticia, g.noticia, c.nombre AS candidato_nombre
-                FROM gnoticias g
-                JOIN candidatos c ON g.id_candidato = c.id_candidato
-                WHERE g.sentimiento IS NULL
-                ORDER BY g.fecha DESC
-                LIMIT ?
-            """, (limit,))
-            return cur.fetchall()
-    except Exception as e:
-        print(f"❌ Error al obtener noticias sin sentimiento: {e}")
-        return []
-
-def update_news_sentiment(id_gnoticia, sentimiento, tema):
-    """
-    Actualiza el sentimiento y el tema de una noticia específica en la tabla `gnoticias`.
-    """
-    try:
-        with get_db_connection() as conn:
-            cur = conn.cursor()
-            cur.execute("""
-                UPDATE gnoticias
-                SET sentimiento = ?, tema = ?
-                WHERE id_gnoticia = ?
-            """, (sentimiento, tema, id_gnoticia))
-            conn.commit()
-            # print(f"✅ Noticia {id_gnoticia} actualizada con sentimiento: {sentimiento}")
-    except Exception as e:
-        print(f"❌ Error al actualizar noticia {id_gnoticia}: {e}")

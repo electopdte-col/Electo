@@ -14,7 +14,7 @@ import requests
 from gnoticias.db_gnoticias import (
     get_db_connection,
     news_exists_in_gnoticias,
-    save_news_to_gnoticias_with_sentiment,
+    save_news_to_gnoticias,
     marcar_candidato_como_procesado,
     reset_candidatos_news,
 )
@@ -118,7 +118,7 @@ def fetch_news_for_candidate(candidato_id, candidato_nombre, start_date, end_dat
 
             prelim['id_log'] = log_id # Asignar el id de log a la noticia
             print(f"-> Relevante. Guardando noticia: {prelim['noticia']}")
-            save_news_to_gnoticias_with_sentiment(prelim)
+            save_news_to_gnoticias(prelim)
             time.sleep(1)
 
     except requests.exceptions.RequestException as e:
