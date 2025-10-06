@@ -21,7 +21,10 @@ if related_queries and TOPIC_ID in related_queries:
     print("\n=== Consultas TOP ===")
     print(related_queries[TOPIC_ID]["top"].head(5))
     print("\n=== Consultas RISING ===")
-    print(related_queries[TOPIC_ID]["rising"].head(5))
+    if related_queries[TOPIC_ID]["rising"] is not None:
+        print(related_queries[TOPIC_ID]["rising"].head(5))
+    else:
+        print("No hay consultas RISING para este tópico.")
 else:
     print("⚠️ No hay consultas relacionadas.")
 
