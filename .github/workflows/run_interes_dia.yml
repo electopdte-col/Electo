@@ -1,0 +1,49 @@
+name: Ejecutar interes_dia y subir base de datos
+
+on:
+  schedule:
+    - cron: '0 23 * * *'   # Todos los días a las 11:00 PM UTC (6:00 PM COL)
+    - cron: '30 4 * * *'   # Todos los días a las 4:30 AM UTC (11:30 PM COL)
+  workflow_dispatch:
+
+jobs:
+  run-interes-dia:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Ejecutar interes_dia
+        run: |
+          python gtrends/interes_dia.py
+
+      - name: Configurar usuario git
+        run: |
+          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions"
+
+      - name: Hacer commit y push de la base de datos
+        run: |
+          git add data/gtrends.db
+          git commit -m "chore: actualiza gtrends.db desde workflow" || echo "No hay cambios en la base de datos"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
