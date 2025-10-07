@@ -1,4 +1,4 @@
-name: Cron ex_gnoticias
+name: Ejecutar noticias
 
 on:
   schedule:
