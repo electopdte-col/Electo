@@ -3,7 +3,7 @@ name: Ejecutar interes
 on:
   schedule:
     - cron: '0 23 * * *'   # Todos los días a las 11:00 PM UTC (6:00 PM COL)
-  - cron: '0 4 * * *'   # Todos los días a las 4:00 AM UTC (11:00 PM COL)
+    - cron: '0 4 * * *'    # Todos los días a las 4:00 AM UTC (11:00 PM COL)
   workflow_dispatch:
 
 jobs:
