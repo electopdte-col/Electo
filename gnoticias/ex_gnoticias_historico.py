@@ -127,7 +127,7 @@ def fetch_news_for_candidate_historico(candidato_id, candidato_nombre, keywords,
 
 # ==== CONFIGURACIÓN MANUAL ====
 # IDs de candidatos a procesar
-CANDIDATOS_IDS = [76, 77, 78]  # <-- Edita aquí los IDs deseados
+CANDIDATOS_IDS = [76]  # <-- Edita aquí los IDs deseados
 # Fechas de inicio y fin (YYYY-MM-DD)
 START_DATE = "2024-01-01"    # <-- Edita aquí la fecha de inicio
 END_DATE = "2025-11-22"      # <-- Edita aquí la fecha de fin
