@@ -18,4 +18,4 @@ jobs:
       - name: Ejecutar ex_gnoticias_historico.py
         run: |
           echo "Ejecutando la tarea a las $(date)"
-          python gnoticias/ex_gnoticias_historico.py
+          PYTHONPATH=. python gnoticias/ex_gnoticias_historico.py
