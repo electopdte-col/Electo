@@ -130,7 +130,7 @@ def fetch_news_for_candidate_historico(candidato_id, candidato_nombre, keywords,
 CANDIDATOS_IDS = [76, 77, 78]  # <-- Edita aquí los IDs deseados
 # Fechas de inicio y fin (YYYY-MM-DD)
 START_DATE = "2024-01-01"    # <-- Edita aquí la fecha de inicio
-END_DATE = "2024-01-10"      # <-- Edita aquí la fecha de fin
+END_DATE = "2025-11-22"      # <-- Edita aquí la fecha de fin
 
 def main():
     start_date = datetime.strptime(START_DATE, "%Y-%m-%d")
