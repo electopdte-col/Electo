@@ -122,12 +122,11 @@ def fetch_news_for_candidate_historico(candidato_id, candidato_nombre, keywords,
         except Exception as e:
             print(f"❌ Error inesperado al procesar feed: {e}")
         current_date += timedelta(days=1)
-    marcar_candidato_como_procesado(candidato_id, campo="his")
 
 
 # ==== CONFIGURACIÓN MANUAL ====
 # IDs de candidatos a procesar
-CANDIDATOS_IDS = [76]  # <-- Edita aquí los IDs deseados
+CANDIDATOS_IDS = [76,77,78]  # <-- Edita aquí los IDs deseados
 # Fechas de inicio y fin (YYYY-MM-DD)
 START_DATE = "2024-01-01"    # <-- Edita aquí la fecha de inicio
 END_DATE = "2025-11-22"      # <-- Edita aquí la fecha de fin
