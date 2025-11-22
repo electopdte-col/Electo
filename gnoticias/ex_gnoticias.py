@@ -6,7 +6,7 @@ import feedparser
 import hashlib
 import time
 import urllib.parse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from googlenewsdecoder import gnewsdecoder
 import requests
 
@@ -23,6 +23,9 @@ from gnoticias.db_log_ejecucion import log_start, log_end, log_error_update, log
 # ================= CONSTANTES =================
 STOPWORDS_APELLIDO = {"de", "del", "la", "las", "los", "y", "san", "santa"}
 
+# Zona horaria de Colombia
+COL_TZ = timezone(timedelta(hours=-5))
+
 # ================= FUNCIONES =================
 def similarity(a, b):
     """Similitud usando SequenceMatcher (0-100)."""
@@ -37,9 +40,12 @@ def normalize_text(text):
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-
-
-
+def normalize_to_colombia_time(fecha_dt):
+    # Si fecha_dt NO tiene tzinfo, asumimos que viene en UTC (caso Google News)
+    if fecha_dt.tzinfo is None:
+        fecha_dt = fecha_dt.replace(tzinfo=timezone.utc)
+    # Convertimos a UTC-5
+    return fecha_dt.astimezone(COL_TZ)
 
 def process_feed_entry(entry, candidato_id):
     titulo = entry.get("title", "")
@@ -62,17 +68,28 @@ def process_feed_entry(entry, candidato_id):
     else:
         noticia = titulo.strip()
         medio = "Desconocido"
+
+    # Normalizar timezone
+    fecha_local = normalize_to_colombia_time(fecha_dt)
+
     google_news_url = entry.get("link", "")
     link = gnewsdecoder(google_news_url).get("decoded_url", google_news_url) if google_news_url else ""
     if not link:
         return None
+
     entry_id = entry.get("id", google_news_url)
     id_corto = hashlib.md5(entry_id.encode("utf-8")).hexdigest()
     return {
         "candidato_id": candidato_id, "id": id_corto, "noticia": noticia, "medio": medio,
-        "fecha": fecha_dt, "source_href": entry.source.get("href", "") if hasattr(entry, "source") else "",
-        "ano": published_year, "mes": published_month, "dia": published_day, "hora": published_hour,
-        "minuto": published_minute, "dia_sem": published_wday, "dia_ano": published_yday,
+        "fecha": fecha_local,   # <-- fecha final en Colombia
+        "source_href": entry.source.get("href", "") if hasattr(entry, "source") else "",
+        "ano": fecha_local.year,
+        "mes": fecha_local.month,
+        "dia": fecha_local.day,
+        "hora": fecha_local.hour,
+        "minuto": fecha_local.minute,
+        "dia_sem": fecha_local.weekday(),
+        "dia_ano": fecha_local.timetuple().tm_yday,
         "link": link, "id_largo": entry_id,
     }
 
