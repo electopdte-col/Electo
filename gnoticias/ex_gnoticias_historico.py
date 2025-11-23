@@ -1,3 +1,4 @@
+
 import re
 import unicodedata
 from difflib import SequenceMatcher
@@ -9,6 +10,34 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from googlenewsdecoder import gnewsdecoder
 import requests
+
+# Para manejo incremental
+def get_last_processed_date(candidato_id):
+    """Consulta en el log la última fecha procesada para el candidato."""
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT mensaje FROM log_ejecucion
+            WHERE proceso = 'ex_gnoticias_historico' AND mensaje LIKE ?
+            ORDER BY fecha_fin DESC LIMIT 1
+        """, (f'%candidato_id={candidato_id}%',))
+        row = cur.fetchone()
+        if row:
+            # El mensaje debe tener el formato: 'candidato_id=XX;ultima_fecha=YYYY-MM-DD'
+            parts = row[0].split(';')
+            for part in parts:
+                if part.startswith('ultima_fecha='):
+                    return datetime.strptime(part.split('=')[1], "%Y-%m-%d")
+    return None
+
+def set_last_processed_date(log_id, candidato_id, last_date):
+    """Actualiza el mensaje del log con la última fecha procesada para el candidato."""
+    from gnoticias.db_gnoticias import get_db_connection
+    with get_db_connection() as conn:
+        cur = conn.cursor()
+        mensaje = f"candidato_id={candidato_id};ultima_fecha={last_date.strftime('%Y-%m-%d')}"
+        cur.execute("UPDATE log_ejecucion SET mensaje = ? WHERE id = ?", (mensaje, log_id))
+        conn.commit()
 
 # Funciones de DB
 from gnoticias.db_gnoticias import (
@@ -149,9 +178,7 @@ START_DATE = "2024-01-01"    # <-- Edita aquí la fecha de inicio
 END_DATE = "2025-11-22"      # <-- Edita aquí la fecha de fin
 
 def main():
-    start_date = datetime.strptime(START_DATE, "%Y-%m-%d")
     end_date = datetime.strptime(END_DATE, "%Y-%m-%d")
-    log_id = log_start('ex_gnoticias_historico', f'procesando ids {CANDIDATOS_IDS}')
     try:
         with get_db_connection() as conn:
             cur = conn.cursor()
@@ -162,12 +189,26 @@ def main():
                     print(f"❌ Candidato con id {candidato_id} no encontrado.")
                     continue
                 candidato_nombre, keywords = row
-                print(f"✅ Procesando histórico: {candidato_nombre} (ID {candidato_id})")
-                fetch_news_for_candidate_historico(candidato_id, candidato_nombre, keywords, start_date, end_date, log_id=log_id)
+                # Buscar última fecha procesada
+                last_date = get_last_processed_date(candidato_id)
+                if last_date:
+                    start_date = last_date + timedelta(days=1)
+                else:
+                    start_date = datetime.strptime(START_DATE, "%Y-%m-%d")
+                # Limitar a 5 meses (aprox 153 días)
+                max_end = start_date + timedelta(days=152)
+                real_end = min(max_end, end_date)
+                print(f"✅ Procesando histórico: {candidato_nombre} (ID {candidato_id}) del {start_date.date()} al {real_end.date()}")
+                log_id = log_start('ex_gnoticias_historico', f'candidato_id={candidato_id};ultima_fecha={start_date.date() - timedelta(days=1)}')
+                try:
+                    fetch_news_for_candidate_historico(candidato_id, candidato_nombre, keywords, start_date, real_end, log_id=log_id)
+                    set_last_processed_date(log_id, candidato_id, real_end)
+                except Exception as e:
+                    print(f"❌ Error inesperado en el procesamiento histórico: {e}")
+                    log_error_update(log_id, e)
+                log_end(log_id, estado='finished', mensaje=f'candidato_id={candidato_id};ultima_fecha={real_end.date()}')
     except Exception as e:
         print(f"❌ Error inesperado en el procesamiento histórico: {e}")
-        log_error_update(log_id, e)
-    log_end(log_id, estado='finished', mensaje='Proceso histórico completado.')
 
 if __name__ == "__main__":
     main()
