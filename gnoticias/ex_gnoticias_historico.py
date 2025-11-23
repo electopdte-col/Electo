@@ -121,6 +121,12 @@ def fetch_news_for_candidate_historico(candidato_id, candidato_nombre, keywords,
             print(f"❌ Error de red al obtener noticias: {e}")
         except Exception as e:
             print(f"❌ Error inesperado al procesar feed: {e}")
+        # Sleep de 2 segundos entre días
+        time.sleep(2)
+        # Sleep de 3 segundos si es domingo (fin de semana)
+        if current_date.weekday() == 6:
+            print("⏸️ Pausa extra de 3 segundos por fin de semana")
+            time.sleep(3)
         current_date += timedelta(days=1)
 
 
