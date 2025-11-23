@@ -18,7 +18,7 @@ def get_last_processed_date(candidato_id):
         cur = conn.cursor()
         cur.execute("""
             SELECT mensaje FROM log_ejecucion
-            WHERE proceso = 'ex_gnoticias_historico' AND mensaje LIKE ?
+            WHERE proceso = 'ex_gnoticias_historico' AND mensaje LIKE ? AND estado = 'finished'
             ORDER BY fecha_fin DESC LIMIT 1
         """, (f'%candidato_id={candidato_id}%',))
         row = cur.fetchone()
