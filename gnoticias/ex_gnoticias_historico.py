@@ -92,6 +92,12 @@ def fetch_news_for_candidate_historico(candidato_id, candidato_nombre, keywords,
             feed = feedparser.parse(url)
             if feed.bozo:
                 print(f"⚠️ Error al parsear el feed: {feed.bozo_exception}")
+                # Si el error es de XML mal formado, sleep 15s y continuar
+                if 'not well-formed' in str(feed.bozo_exception):
+                    print("⏸️ Pausa de 15 segundos por error de formato en el feed")
+                    time.sleep(15)
+                    current_date += timedelta(days=1)
+                    continue
             for entry in feed.entries:
                 prelim = process_feed_entry(entry, candidato_id, current_date)
                 if not prelim:
@@ -127,7 +133,12 @@ def fetch_news_for_candidate_historico(candidato_id, candidato_nombre, keywords,
         if current_date.weekday() == 6:
             print("⏸️ Pausa extra de 3 segundos por fin de semana")
             time.sleep(3)
-        current_date += timedelta(days=1)
+        # Sleep de 15 segundos al cambiar de mes
+        next_date = current_date + timedelta(days=1)
+        if next_date.month != current_date.month:
+            print("⏸️ Pausa de 15 segundos por cambio de mes")
+            time.sleep(15)
+        current_date = next_date
 
 
 # ==== CONFIGURACIÓN MANUAL ====
